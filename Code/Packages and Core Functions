@@ -1,0 +1,86 @@
+pacman::p_load(dplyr, tidyverse, ggplot2, ggthemr, rio, here, fixest, gridExtra, grid,
+               magrittr, lfe, HonestDiD, bacondecomp, haven, plotmath,
+               openxlsx, did)
+
+summarize_did <- function(out){
+  es <- aggte(out, type = "dynamic") 
+  
+  temp <- cbind.data.frame(year=es$egt +2020,
+                           att=es$att.egt,
+                           min_95 = es$att.egt - es$se.egt*es$crit.val.egt,
+                           max_95 = es$att.egt + es$se.egt*es$crit.val.egt)
+  
+  grp <- aggte(out, type = "group")
+  
+  overall.att <- (grp$att.egt)
+  overall_min_95 <- (grp$att.egt - grp$se.egt*grp$crit.val.egt)
+  overall_max_95 <- (grp$att.egt + grp$se.egt*grp$crit.val.egt)
+  
+  data.frame(year = "overall", 
+             att = overall.att, 
+             min_95 = overall_min_95, 
+             max_95 = overall_max_95) %>% 
+    rbind(temp %>% filter(year %in% c(2020, 2021,2022))) %>% mutate(
+      pval = out$Wpval
+    )
+}
+
+summarize_did_all <- function(out){
+  es <- aggte(out, type = "dynamic") 
+  
+  temp <- cbind.data.frame(year=es$egt +2020,
+                           att=es$att.egt,
+                           min_95 = es$att.egt - es$se.egt*es$crit.val.egt,
+                           max_95 = es$att.egt + es$se.egt*es$crit.val.egt)
+  
+  grp <- aggte(out, type = "group")
+  
+  overall.att <- (grp$att.egt)
+  overall_min_95 <- (grp$att.egt - grp$se.egt*grp$crit.val.egt)
+  overall_max_95 <- (grp$att.egt + grp$se.egt*grp$crit.val.egt)
+  
+  data.frame(year = "overall", 
+             att = overall.att, 
+             min_95 = overall_min_95, 
+             max_95 = overall_max_95) %>% 
+    rbind(temp) %>% mutate(
+      pval = out$Wpval
+    )
+}
+
+#compile multiplot
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
