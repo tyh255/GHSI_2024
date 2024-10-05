@@ -1,0 +1,78 @@
+# Create a list to save all the results from 6 categories
+res <- list()
+
+did_for_subcats <- function(cat_num, first_col, last_col, dat){
+  subcat_vars <- colnames(dat)[first_col:last_col] <- paste0("subcat_", cat_num, "_", 1:(last_col - first_col +1))
+  
+  for(var in subcat_vars){ # repeat for each subcategory
+    temp <-  dat 
+    range <- range(temp[,var], na.rm=T)
+    slide <- range[1]:range[2]
+    
+    res <- lapply(slide, function(x, dat = temp){
+      dat$trt_ghsi <- ifelse(dat[,var]>=x, 2020, 0)
+      if(!table(dat$trt_ghsi) %>% length() ==1){
+        tryCatch(
+          expr = {
+            out_ghs <- att_gt(yname = "coverage.x",
+                              gname = "trt_ghsi",
+                              idname = "id_country_vac",
+                              tname = "year",
+                              xformla = ~ who_region.x + wb_income.x,
+                              #allow_unbalanced_panel = T,
+                              data = dat %>% filter(year >= 2015),
+                              est_method = "dr",
+                              base_period = "universal")
+            group_effects_ghs <- aggte(out_ghs, type = "group")
+            
+            res_temp <- data.frame(
+              a1 = x,
+              cat = var,
+              par.p = out_ghs$Wpval,
+              attge = group_effects_ghs$overall.att,
+              lw.95 = group_effects_ghs$overall.att - 1.96*group_effects_ghs$se.egt,
+              hg.95 = group_effects_ghs$overall.att + 1.96*group_effects_ghs$se.egt
+            )
+            return(res_temp)
+          },
+          error = function(e){ 
+            NA
+          })
+      }
+    })
+    
+    # append the results into the dataframe
+    res <- do.call('rbind', res) %>% filter(!is.na(a1))
+    if(var == subcat_vars[1]){
+      res_ghs_slide <- res   
+    }else{
+      res_ghs_slide %<>% rbind(res)
+    }
+  }
+  
+  res_ghs_slide$par.p.tf <- ifelse(res_ghs_slide$par.p < 0.05, 'not-parallel', 'parallel')
+  
+  return(res_ghs_slide)
+}
+
+plot_subcat_did <- function(res, title = "Subcategory 1 indicators"){
+  ggplot(res,
+         aes(x=a1,y=attge,
+             color=par.p.tf)) + 
+    geom_point() + 
+    geom_errorbar(aes(ymin = lw.95, ymax = hg.95), width = 0.2) + 
+    geom_hline(yintercept=0) + labs(x='Score',y='DiD Effect (2020-2022)') + 
+    facet_wrap(.~cat) +
+    theme_minimal() + 
+    labs(color='parallel \npre-trend')+
+    ggtitle(title)
+}
+
+res[[1]] <- did_for_subcats(
+  cat_num = 1,
+  first_col = 34,
+  last_col = 40,
+  dat = dat_merged3
+)
+p1 <- plot_subcat_did(res[[1]], "Subcategory 1 Indicators") 
+p1
