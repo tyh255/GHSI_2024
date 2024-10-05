@@ -1,0 +1,16 @@
+#Sample code for the computation of our summary statistics
+sum(table(unique(dat_merged3$country.x[which(dat_merged3$ghsi.recompute<57)])))
+
+summary(dat_merged3$ghsi.recompute[which(dat_merged3$ghsi.recompute<57)])
+sd(dat_merged3$ghsi.recompute[which(dat_merged3$ghsi.recompute<57)],na.rm=T)
+
+sum(table(unique(dat_merged3$country.x[which(dat_merged3$wb_income.x=='low'&dat_merged3$ghsi.recompute>=57)])))
+
+sum(table(unique(dat_merged3$country.x[which(dat_merged3$who_region.x=="africa")])))
+sum(table(unique(dat_merged3$country.x[which(dat_merged3$ghsi.recompute>=57&dat_merged3$who_region.x=="africa")])))
+
+summary(dat_merged3$coverage.x[which(dat_merged3$ghsi.recompute<57)])
+sd(dat_merged3$coverage.x[which(dat_merged3$ghsi.recompute<57)],na.rm=T)
+
+summary(dat_merged3$coverage.x)
+sd(dat_merged3$coverage.x,na.rm=T)
